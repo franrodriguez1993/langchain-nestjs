@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Chat, ChatDocument } from './chat.model';
 import { Model } from 'mongoose';
+import { MessageDTO } from './chat.dto';
 
 @Injectable()
 export class ChatService {
@@ -15,7 +16,7 @@ export class ChatService {
     return this.chatModel.findOne({ auth0Id, active: true });
   }
 
-  addMessage(auth0Id: string, message: any) {
+  addMessage(auth0Id: string, message: MessageDTO) {
     return this.chatModel.updateOne(
       { auth0Id, active: true },
       { $addToSet: { messages: message } },

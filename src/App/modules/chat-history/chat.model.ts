@@ -1,4 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { MessageDTO } from './chat.dto';
 export type ChatDocument = Chat & Document;
 
 @Schema({
@@ -16,7 +17,7 @@ export class Chat {
   active: boolean;
 
   @Prop({ default: [] })
-  messages: any[];
+  messages: MessageDTO[];
 }
 
 export const ChatSchema = SchemaFactory.createForClass(Chat);

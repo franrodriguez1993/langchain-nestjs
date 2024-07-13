@@ -37,20 +37,6 @@ export class ChatController {
     return { statusCode: HttpStatus.CREATED, result: data };
   }
 
-  @Put('')
-  @HttpCode(HttpStatus.OK)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'add message' })
-  async addMessage(@Req() request: Request) {
-    const auth0Id = this.auth0ClientService.getAuth0Id(request);
-    const chat = await this.chatService.getChat(auth0Id);
-    if (!chat) throw new NotFoundException('Chat not found');
-    const data = await this.chatService.addMessage(auth0Id, {
-      message: 'hola loco todo bien?',
-    });
-    return { statusCode: HttpStatus.OK, result: data };
-  }
-
   @Get('')
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
