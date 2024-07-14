@@ -31,7 +31,6 @@ export class ConversationService {
 
     // Serialize history messages:
     const messages = this.serializeMessages(chat.messages);
-    console.log(messages);
     // Invoke
     const response = await executor.invoke({
       input: dto.question,

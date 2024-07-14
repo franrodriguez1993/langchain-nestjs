@@ -25,17 +25,6 @@ export class ChatController {
     private auth0ClientService: Auth0ClientService,
   ) {}
 
-  @Post('')
-  @HttpCode(HttpStatus.CREATED)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create chat' })
-  async createChat(@Req() request: Request) {
-    const auth0Id = this.auth0ClientService.getAuth0Id(request);
-    const chat = await this.chatService.getChat(auth0Id);
-    if (chat) throw new BadRequestException('User has an open chat');
-    const data = await this.chatService.createChat(auth0Id);
-    return { statusCode: HttpStatus.CREATED, result: data };
-  }
 
   @Get('')
   @HttpCode(HttpStatus.OK)
