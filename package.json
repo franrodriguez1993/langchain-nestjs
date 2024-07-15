@@ -42,8 +42,10 @@
     "langchain": "^0.2.9",
     "mongodb": "^6.8.0",
     "mongoose": "^8.0.3",
+    "natural": "^7.1.0",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
+    "stopword": "^3.0.1",
     "zod": "^3.23.8"
   },
   "devDependencies": {

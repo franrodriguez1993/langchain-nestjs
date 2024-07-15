@@ -7,10 +7,6 @@ import { MemoryVectorStore } from 'langchain/vectorstores/memory';
 import { createOpenAIFunctionsAgent, AgentExecutor } from 'langchain/agents';
 import { TavilySearchResults } from '@langchain/community/tools/tavily_search';
 import { messageAgentPrompt } from '../prompts/messageAgent.prompt';
-import { MongoClient } from 'mongodb';
-import { BufferMemory } from 'langchain/memory';
-import { MongoDBChatMessageHistory } from '@langchain/mongodb';
-
 @Injectable()
 export class LangchainService {
   private llm: ChatOpenAI;
