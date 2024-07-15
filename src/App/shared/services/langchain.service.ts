@@ -7,6 +7,9 @@ import { MemoryVectorStore } from 'langchain/vectorstores/memory';
 import { createOpenAIFunctionsAgent, AgentExecutor } from 'langchain/agents';
 import { TavilySearchResults } from '@langchain/community/tools/tavily_search';
 import { messageAgentPrompt } from '../prompts/messageAgent.prompt';
+import { MongoClient } from 'mongodb';
+import { BufferMemory } from 'langchain/memory';
+import { MongoDBChatMessageHistory } from '@langchain/mongodb';
 
 @Injectable()
 export class LangchainService {
@@ -42,7 +45,8 @@ export class LangchainService {
     return vectorMemory;
   }
 
-  async messageAgent(): Promise<AgentExecutor> {
+  // create simple agent 
+  async createDefaultAgent(): Promise<AgentExecutor> {
     //tools:
     const tavilySearchTool = new TavilySearchResults();
     const tools = [tavilySearchTool];
@@ -59,4 +63,7 @@ export class LangchainService {
 
     return agentExecutor;
   }
+
+
+  
 }

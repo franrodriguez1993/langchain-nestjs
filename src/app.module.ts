@@ -5,7 +5,6 @@ import helmet from 'helmet';
 import { ConfigModule } from '@nestjs/config';
 import { MongoConfigModule } from './database/MongoConfig.module';
 import { SharedModule } from './App/shared/shared.module';
-import { ChatModule } from './App/modules/chat-history/chat.module';
 import { ConversationModule } from './App/modules/conversation/conversation.module';
 
 @Module({
@@ -13,7 +12,6 @@ import { ConversationModule } from './App/modules/conversation/conversation.modu
     ConfigModule.forRoot({ isGlobal: true }),
     MongoConfigModule,
     SharedModule,
-    ChatModule,
     ConversationModule,
   ],
   controllers: [AppController],
