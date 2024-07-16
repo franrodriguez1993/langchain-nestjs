@@ -2,18 +2,18 @@ import { Injectable } from '@nestjs/common';
 import { ChatOpenAI } from '@langchain/openai';
 import { CheerioWebBaseLoader } from '@langchain/community/document_loaders/web/cheerio';
 import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
+
 import { OpenAIEmbeddings } from '@langchain/openai';
 import { MemoryVectorStore } from 'langchain/vectorstores/memory';
-import { createOpenAIFunctionsAgent, AgentExecutor } from 'langchain/agents';
-import { TavilySearchResults } from '@langchain/community/tools/tavily_search';
-import { messageAgentPrompt } from '../prompts/messageAgent.prompt';
+import { productArrayTemplate,structuredProductParser } from '../prompts/product-array.prompt';
+import { productExistsTemplate } from '../prompts/product-exists.prompt';
 @Injectable()
 export class LangchainService {
   private llm: ChatOpenAI;
 
   constructor() {
     this.llm = new ChatOpenAI({
-      temperature: 0.7,
+      temperature: 0.3,
       maxTokens: 1000,
       verbose: false,
     });
@@ -41,25 +41,29 @@ export class LangchainService {
     return vectorMemory;
   }
 
-  // create simple agent 
-  async createDefaultAgent(): Promise<AgentExecutor> {
-    //tools:
-    const tavilySearchTool = new TavilySearchResults();
-    const tools = [tavilySearchTool];
+  // Genera un array de objetos (productos) en base al input del usuario.
+  async productArrayAgent(products:string[],input:string) {
+     const prompt = productArrayTemplate(products);
 
-    // agent
-    const messageAgent = await createOpenAIFunctionsAgent({
-      llm: this.llm,
-      prompt: messageAgentPrompt,
-      tools,
+     const chain = prompt.pipe(this.llm).pipe(structuredProductParser);
+
+    const response = await chain.invoke({
+      formattingInstruction: structuredProductParser.getFormatInstructions(),
+      input,
     });
 
-    // executor
-    const agentExecutor = new AgentExecutor({ agent: messageAgent, tools });
-
-    return agentExecutor;
+    return response;
   }
 
+  async productExistsAgent(product: string[], input: string) {
+    const prompt = productExistsTemplate(product);
+
+    const chain = prompt.pipe(this.llm);
+
+    const response = await chain.invoke({ input });
+
+    return response;
+  }
 
   
 }

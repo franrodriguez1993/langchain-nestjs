@@ -23,28 +23,24 @@ export class ConversationService {
 
   async message(auth0Id: string, dto: ConversationDTO) {
 
-    const {chatHistory,memoryClient} = await this.mongoChatHistory.getMongoChatHistory(auth0Id);
-
-    // Get agent Executor:
-    const executor = await this.langchainService.createDefaultAgent();
-
+    //TODO: Necesitamos manejar el historial del chat con esta nueva lógica de agentes.
+    // const {chatHistory,memoryClient} = await this.mongoChatHistory.getMongoChatHistory(auth0Id);
 
     //TODO: Crear lógica para seleccionar el agente en función del intent.
     const tokens = this.nlpService.preprocess(dto.question);
     const intent = this.nlpService.classify(tokens);
 
 
-    // Invoke
-    const response = await executor.invoke({
-      input: dto.question,
-      chat_history:chatHistory
-    });
+    const products = ["milanesa | 2500", "pollo al horno | 6000", "ensalada cesar | 3200", "empanada | 750"]
+    
+    // const response = await this.langchainService.productArrayAgent(products, dto.question);
+    const response = await this.langchainService.productExistsAgent(products, dto.question);
 
     //save chat
-    await memoryClient.chatHistory.addUserMessage(dto.question);
-    await memoryClient.chatHistory.addAIChatMessage(response.output);
+    // await memoryClient.chatHistory.addUserMessage(dto.question);
+    // await memoryClient.chatHistory.addAIChatMessage(response.output);
 
-    return response.output;
+    return response.content;
   }
   
 }
