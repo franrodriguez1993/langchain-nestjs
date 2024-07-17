@@ -5,7 +5,12 @@ import { LangchainService } from './services/langchain.service';
 import { MongoChatHistory } from './services/mongo-history.service';
 import { NLPService } from './services/npl.service';
 
-const SERVICES = [Auth0ClientService, LangchainService,MongoChatHistory,NLPService];
+const SERVICES = [
+  Auth0ClientService,
+  LangchainService,
+  MongoChatHistory,
+  NLPService,
+];
 
 @Module({
   imports: [HttpModule],

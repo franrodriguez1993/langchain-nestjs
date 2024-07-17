@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { WordTokenizer } from 'natural';
-import { removeStopwords } from "stopword";
+import { removeStopwords } from 'stopword';
 
 @Injectable()
 export class NLPService {
@@ -11,13 +11,32 @@ export class NLPService {
     return removeStopwords(tokens);
   }
 
-   classify(tokens: string[]): string {
-    const searchKeywords = ['buscar', 'encontrar', 'consulta','averiguar',"buscando","averiguando"];
-    const payKeywords = ['comprar', 'compra', 'cuanto','valor','vale','sale','monto','dinero','plata'];
+  classify(tokens: string[]): string {
+    const searchKeywords = [
+      'tienen',
+      'encontrar',
+      'consulta',
+      'averiguar',
+      'buscando',
+      'averiguando',
+    ];
+    const payKeywords = [
+      'comprar',
+      'compra',
+      'cuanto',
+      'valor',
+      'vale',
+      'sale',
+      'monto',
+      'dinero',
+      'plata',
+    ];
 
-    if (tokens.some(token => searchKeywords.includes(token.toLowerCase()))) {
+    if (tokens.some((token) => searchKeywords.includes(token.toLowerCase()))) {
       return 'searchIntent';
-    } else if (tokens.some(token => payKeywords.includes(token.toLowerCase()))) {
+    } else if (
+      tokens.some((token) => payKeywords.includes(token.toLowerCase()))
+    ) {
       return 'payIntent';
     } else {
       return 'defaultIntent';

@@ -6,6 +6,7 @@ import { ConfigModule } from '@nestjs/config';
 import { MongoConfigModule } from './database/MongoConfig.module';
 import { SharedModule } from './App/shared/shared.module';
 import { ConversationModule } from './App/modules/conversation/conversation.module';
+import { ProductModule } from './App/modules/product/product.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { ConversationModule } from './App/modules/conversation/conversation.modu
     MongoConfigModule,
     SharedModule,
     ConversationModule,
+    ProductModule,
   ],
   controllers: [AppController],
   providers: [AppService],
