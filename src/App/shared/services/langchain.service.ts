@@ -4,7 +4,7 @@ import {
   productArrayTemplate,
   structuredProductParser,
 } from '../prompts/product-array.prompt';
-import { productExistsTemplate } from '../prompts/product-exists.prompt';
+import { searchAndListTemplate } from '../prompts/search-list.prompt';
 import { intentQuestionPrompt } from '../prompts/intent.prompt';
 import { BaseMessage } from '@langchain/core/messages';
 @Injectable()
@@ -20,25 +20,24 @@ export class LangchainService {
   }
 
   // Genera un array de objetos (productos) en base al input del usuario.
-  async productArrayAgent(products: string[], input: string) {
+  async productArrayAgent(products: string[],chatHistory:BaseMessage[]) {
     const prompt = productArrayTemplate(products);
 
     const chain = prompt.pipe(this.llm).pipe(structuredProductParser);
 
     const response = await chain.invoke({
       formattingInstruction: structuredProductParser.getFormatInstructions(),
-      input,
+      chat_history:chatHistory,
     });
-
     return response;
   }
 
-  async productExistsAgent(product: string[], input: string) {
-    const prompt = productExistsTemplate(product);
+  async searchAndListTemplate(product: string[], input: string,chatHistory:BaseMessage[]) {
+    const prompt = searchAndListTemplate(product);
 
     const chain = prompt.pipe(this.llm);
 
-    const response = await chain.invoke({ input });
+    const response = await chain.invoke({ input, chat_history:chatHistory });
 
     return response;
   }

@@ -5,14 +5,14 @@ export const intentQuestionPrompt = ChatPromptTemplate.fromMessages([
   [
     'system',
     `
-     Eres una IA de un restaurant que determina el intent de una pregunta: {input}. 
-     Si el usuario te dice que quiere ordenar uno o más productos retorna: buyIntent. 
-     Ejemplo:  "quiero ordenar", "voy a llevar", "quiero pedir".
-     Si el usuario desea saber el precio o la existencia de un producto en el catálogo retorna: searchIntent.
-     Ejemplo: "cuanto cuesta", "cuanto vale", "que precio tiene".
-     Si el usuario desea o quiere confirmar una orden de compra retorna: confirmIntent.
-     Si el usuario desea o quiere rechazar una orden de compra retorna: rejectIntent. 
-     Si el usuario muestra otro tipo de intención retorna: defaultIntent. Tu respuesta debe ser solamente el string indicado, no debes responder nada mas.
+     Eres una IA de un restaurant que determina el intent de un input: {input}. Siempre debes tener en cuenta el contexto de la conversación: {chat_history}. 
+     - Si el usuario desea saber el precio o la existencia de un producto en el catálogo retorna: searchIntent.
+     Ejemplo: "cuanto cuesta", "cuanto vale", "que precio tiene","quiero ordenar", "voy a llevar", "quiero pedir".
+     - Si el usuario responde de forma positiva a la pregunta ¿Deseas confirmar tu orden de compra? retorna: confirmIntent.
+     - Si el usuario responde de forma negativa a la pregunta ¿Deseas confirmar tu orden de compra? retorna: rejectIntent.
+     - Si el usuario responde a la pregunta ¿Deseas agregar este producto a tu orden? o ¿Deseas ordenar algo más? retorna: SearchIntent. 
+     - Si el usuario muestra otro tipo de intención retorna: defaultIntent.
+     Tus respuestas solo pueden ser searchIntent, confirmIntent, rejectIntent o defaultIntent. No debes inventar nada y siempre debes basarte en los enunciados de este template.
       `,
   ],
   new MessagesPlaceholder('chat_history'),

@@ -7,7 +7,7 @@ import { NLPService } from '../../shared/services/npl.service';
 import { ProductService } from '../product/product.service';
 import { IntentType } from '../../shared/enums/intent.enum';
 import { BufferMemory } from 'langchain/memory';
-
+import { BaseMessage } from '@langchain/core/messages';
 @Injectable()
 export class ConversationService {
   private langchainService: LangchainService;
@@ -29,24 +29,24 @@ export class ConversationService {
   }
 
   async message(auth0Id: string, dto: ConversationDTO) {
-    //TODO: Necesitamos manejar el historial del chat con esta nueva lógica de agentes.
     const { chatHistory, memoryClient } =
       await this.mongoChatHistory.getMongoChatHistory(auth0Id);
 
     // define intent:
     const intent = await this.langchainService.intentAgent(
       dto.question,
-      chatHistory,
+      [chatHistory[chatHistory.length -1]],
     );
+    console.log(intent)
+    console.log("-----------")
+    console.log(intent.content)
+    console.log("-----------")
     switch (intent.content) {
       case IntentType.SEARCH: {
-        await this.searchIntentProcess(dto, memoryClient);
-      }
-      case IntentType.BUY: {
-        return await this.buyIntentProcess(dto, memoryClient);
+      return await this.searchIntentProcess(dto, memoryClient,chatHistory);
       }
       case IntentType.CONFIRM: {
-        return await this.confirmIntentProcess(dto, memoryClient);
+        return await this.confirmIntentProcess(dto, memoryClient,chatHistory);
       }
       case IntentType.REJECT: {
         return await this.rejectIntentProcess(dto, memoryClient);
@@ -54,43 +54,29 @@ export class ConversationService {
     }
   }
 
-  /** BUY INTENT **/
-  async buyIntentProcess(dto: ConversationDTO, memoryClient: BufferMemory) {
-    const products = await this.serializeProducts();
-    const response = await this.langchainService.productArrayAgent(
-      products,
-      dto.question,
-    );
-    let totalPrice = 0;
-    response.products.map((p) => {
-      totalPrice += p.price * p.quantity;
-    });
-
-    const resChat = `¿Desea confirmar orden de compra por: ${totalPrice}?`;
-
-    //save chat_history
-    await memoryClient.chatHistory.addUserMessage(dto.question);
-    await memoryClient.chatHistory.addAIChatMessage(resChat);
-    return resChat;
-  }
-
   /**  SEARCH INTENT **/
-  async searchIntentProcess(dto: ConversationDTO, memoryClient: BufferMemory) {
+  async searchIntentProcess(dto: ConversationDTO, memoryClient: BufferMemory,chatHistory:BaseMessage[]) {
     const products = await this.serializeProducts();
-    const response = await this.langchainService.productExistsAgent(
+    const response = await this.langchainService.searchAndListTemplate(
       products,
       dto.question,
+      chatHistory
     );
     await memoryClient.chatHistory.addUserMessage(dto.question);
     await memoryClient.chatHistory.addAIChatMessage(
       response.content.toString(),
     );
-    return response.content;
+    return response.content.toString();
   }
 
   /** CONFIRM INTENT **/
-  async confirmIntentProcess(dto: ConversationDTO, memoryClient: BufferMemory) {
-    const resChat = `Gracias por concretar la compra.`;
+  async confirmIntentProcess(dto: ConversationDTO, memoryClient: BufferMemory,chatHistory:BaseMessage[]) {
+    const products = await this.serializeProducts();
+    //TODO: Probar si funciona pasándole solo el chat, sin la lista de productos.
+    const productList = await this.langchainService.productArrayAgent(products, chatHistory);
+    console.log(productList);
+
+    const resChat = "Orden confirmada."
     await memoryClient.chatHistory.addUserMessage(dto.question);
     await memoryClient.chatHistory.addAIChatMessage(resChat);
     return resChat; 

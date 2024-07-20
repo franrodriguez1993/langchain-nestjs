@@ -1,11 +1,15 @@
 import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { z } from 'zod';
 import { StructuredOutputParser } from 'langchain/output_parsers';
+import { MessagesPlaceholder } from '@langchain/core/prompts';
 
 export function productArrayTemplate(products: string[]) {
-  return ChatPromptTemplate.fromTemplate(`
-      Dado el siguiente listado de productos: ${products}. Procesa la orden del usuario: {input}. Debes crear un array de objetos siguiendo la siguiente estructura: {formattingInstruction}. Si en caso el usuario ordena un producto que no existe en la lista, no crees el array de objetos. En su lugar, devuelve un array vacío.
-      `);
+  return ChatPromptTemplate.fromMessages([["system",`
+      Dado el siguiente listado de productos: ${products}. Procesa la orden del usuario: {chat_history}. Debes crear un array de objetos siguiendo la siguiente estructura: {formattingInstruction}.
+      Debes buscar en la conversación los productos que el usuario haya confirmado que desea comprar e ignorar el resto.
+      `],
+        new MessagesPlaceholder('chat_history'),
+  ]);
 }
 
 export const structuredProductParser = StructuredOutputParser.fromZodSchema(
