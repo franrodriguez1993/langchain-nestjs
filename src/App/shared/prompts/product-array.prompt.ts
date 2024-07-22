@@ -4,11 +4,15 @@ import { StructuredOutputParser } from 'langchain/output_parsers';
 import { MessagesPlaceholder } from '@langchain/core/prompts';
 
 export function productArrayTemplate(products: string[]) {
-  return ChatPromptTemplate.fromMessages([["system",`
+  return ChatPromptTemplate.fromMessages([
+    [
+      'system',
+      `
       Dado el siguiente listado de productos: ${products}. Procesa la orden del usuario: {chat_history}. Debes crear un array de objetos siguiendo la siguiente estructura: {formattingInstruction}.
       Debes buscar en la conversación los productos que el usuario haya confirmado que desea comprar e ignorar el resto.
-      `],
-        new MessagesPlaceholder('chat_history'),
+      `,
+    ],
+    new MessagesPlaceholder('chat_history'),
   ]);
 }
 

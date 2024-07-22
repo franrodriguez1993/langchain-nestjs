@@ -3,15 +3,21 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Product, ProductDocument } from './product.schema';
 import { Model } from 'mongoose';
 import { CreateProductDTO, UpdateProductDTO } from './product.dto';
+import { LangchainService } from '../../shared/services/langchain.service';
 
 @Injectable()
 export class ProductService {
   constructor(
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
+    private langchainService: LangchainService,
   ) {}
 
-  createProduct(dto: CreateProductDTO): Promise<Product> {
-    return this.productModel.create(dto);
+  async createProduct(dto: CreateProductDTO): Promise<Product> {
+    const product = await this.productModel.create(dto);
+    const serialized = `title: ${product.name} | price: ${product.price}`;
+    await this.langchainService.vectorizeData(serialized);
+
+    return product;
   }
 
   getProductById(id: string): Promise<Product> {

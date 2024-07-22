@@ -7,7 +7,7 @@ import { NLPService } from '../../shared/services/npl.service';
 import { ProductService } from '../product/product.service';
 import { IntentType } from '../../shared/enums/intent.enum';
 import { BufferMemory } from 'langchain/memory';
-import { BaseMessage } from '@langchain/core/messages';
+import { BaseMessage, HumanMessage } from '@langchain/core/messages';
 @Injectable()
 export class ConversationService {
   private langchainService: LangchainService;
@@ -31,22 +31,30 @@ export class ConversationService {
   async message(auth0Id: string, dto: ConversationDTO) {
     const { chatHistory, memoryClient } =
       await this.mongoChatHistory.getMongoChatHistory(auth0Id);
+    
+    //El intent agent necesita el último mensaje de la conversación para tener el contexto de lo que dice el user. Si no el chat no existe, creamos un mensaje base para que no rompa.
+    const lastMessage =
+      chatHistory.length !== 0
+        ? [chatHistory[chatHistory.length - 1]]
+        : [new HumanMessage('')];
 
     // define intent:
     const intent = await this.langchainService.intentAgent(
       dto.question,
-      [chatHistory[chatHistory.length -1]],
+      lastMessage,
     );
-    console.log(intent)
-    console.log("-----------")
-    console.log(intent.content)
-    console.log("-----------")
+    
+    console.log(intent);
+    console.log('-----------');
+    console.log(intent.content);
+    console.log('-----------');
+
     switch (intent.content) {
       case IntentType.SEARCH: {
-      return await this.searchIntentProcess(dto, memoryClient,chatHistory);
+        return await this.searchIntentProcess(dto, memoryClient, chatHistory);
       }
       case IntentType.CONFIRM: {
-        return await this.confirmIntentProcess(dto, memoryClient,chatHistory);
+        return await this.confirmIntentProcess(dto, memoryClient, chatHistory);
       }
       case IntentType.REJECT: {
         return await this.rejectIntentProcess(dto, memoryClient);
@@ -55,12 +63,14 @@ export class ConversationService {
   }
 
   /**  SEARCH INTENT **/
-  async searchIntentProcess(dto: ConversationDTO, memoryClient: BufferMemory,chatHistory:BaseMessage[]) {
-    const products = await this.serializeProducts();
-    const response = await this.langchainService.searchAndListTemplate(
-      products,
+  async searchIntentProcess(
+    dto: ConversationDTO,
+    memoryClient: BufferMemory,
+    chatHistory: BaseMessage[],
+  ) {
+    const response = await this.langchainService.searchAndListAgent(
       dto.question,
-      chatHistory
+      chatHistory,
     );
     await memoryClient.chatHistory.addUserMessage(dto.question);
     await memoryClient.chatHistory.addAIChatMessage(
@@ -70,16 +80,23 @@ export class ConversationService {
   }
 
   /** CONFIRM INTENT **/
-  async confirmIntentProcess(dto: ConversationDTO, memoryClient: BufferMemory,chatHistory:BaseMessage[]) {
+  async confirmIntentProcess(
+    dto: ConversationDTO,
+    memoryClient: BufferMemory,
+    chatHistory: BaseMessage[],
+  ) {
     const products = await this.serializeProducts();
     //TODO: Probar si funciona pasándole solo el chat, sin la lista de productos.
-    const productList = await this.langchainService.productArrayAgent(products, chatHistory);
+    const productList = await this.langchainService.productArrayAgent(
+      products,
+      chatHistory,
+    );
     console.log(productList);
 
-    const resChat = "Orden confirmada."
+    const resChat = 'Orden confirmada.';
     await memoryClient.chatHistory.addUserMessage(dto.question);
     await memoryClient.chatHistory.addAIChatMessage(resChat);
-    return resChat; 
+    return resChat;
   }
 
   /** REJECT INTENT **/

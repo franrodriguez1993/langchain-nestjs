@@ -1,8 +1,11 @@
 import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { MessagesPlaceholder } from '@langchain/core/prompts';
 
-export function searchAndListTemplate(products: string[]) {
-  return ChatPromptTemplate.fromMessages([["system",`
+export function searchAndListTemplate(products: string) {
+  return ChatPromptTemplate.fromMessages([
+    [
+      'system',
+      `
       Dado el siguiente listado de productos: ${products}. Procesa la orden del usuario: {input}. 
       Indicarle el precio del producto que desea comprar y si desea agregarlo a la orden de compra.
       Si el usuario indica que desea agregarlo a la orden de compra debes preguntarle si desea ordenar algo más listandole todos los productos que va ordenando hasta el momento y la cantidad de cada uno de ellos.
@@ -20,7 +23,9 @@ export function searchAndListTemplate(products: string[]) {
       ia: ¿Deseas ordenar algo más?
       usuario: no
       ia: Okay, ¿Deseas confirmar tu orden de compra?
-      `],
-      new MessagesPlaceholder('chat_history'),
-    ["human", "{input}"]]);
+      `,
+    ],
+    new MessagesPlaceholder('chat_history'),
+    ['human', '{input}'],
+  ]);
 }

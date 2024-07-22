@@ -31,6 +31,7 @@
     "@nestjs/mongoose": "^10.0.2",
     "@nestjs/platform-express": "^10.0.0",
     "@nestjs/swagger": "^7.3.1",
+    "@pinecone-database/pinecone": "^3.0.0",
     "axios": "^1.6.3",
     "cheerio": "^1.0.0-rc.12",
     "class-transformer": "^0.5.1",
@@ -46,6 +47,7 @@
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
     "stopword": "^3.0.1",
+    "tiktoken": "^1.0.15",
     "zod": "^3.23.8"
   },
   "devDependencies": {
