@@ -56,6 +56,7 @@ export class LangchainService {
   }
 
   async intentAgent(input: string, chat_history: BaseMessage[]) {
+    
     const chain = intentQuestionPrompt.pipe(this.llm);
     const response = await chain.invoke({ input, chat_history });
     return response;

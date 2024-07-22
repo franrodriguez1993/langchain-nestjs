@@ -1,5 +1,4 @@
-import { ChatPromptTemplate } from '@langchain/core/prompts';
-import { MessagesPlaceholder } from '@langchain/core/prompts';
+import { ChatPromptTemplate,MessagesPlaceholder } from '@langchain/core/prompts';
 
 export const intentQuestionPrompt = ChatPromptTemplate.fromMessages([
   [
@@ -10,7 +9,7 @@ export const intentQuestionPrompt = ChatPromptTemplate.fromMessages([
      Ejemplo: "cuanto cuesta", "cuanto vale", "que precio tiene","quiero ordenar", "voy a llevar", "quiero pedir".
      - Si el usuario responde de forma positiva a la pregunta ¿Deseas confirmar tu orden de compra? retorna: confirmIntent.
      - Si el usuario responde de forma negativa a la pregunta ¿Deseas confirmar tu orden de compra? retorna: rejectIntent.
-     - Si el usuario responde a la pregunta ¿Deseas agregar este producto a tu orden? o ¿Deseas ordenar algo más? retorna: SearchIntent. 
+     - Si el usuario responde a la pregunta ¿Deseas agregar este producto a tu orden? o ¿Deseas ordenar algo más? retorna: searchIntent. 
      - Si el usuario muestra otro tipo de intención retorna: defaultIntent.
      Tus respuestas solo pueden ser searchIntent, confirmIntent, rejectIntent o defaultIntent. No debes inventar nada y siempre debes basarte en los enunciados de este template.
       `,
