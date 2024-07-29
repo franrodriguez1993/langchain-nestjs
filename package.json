@@ -40,7 +40,7 @@
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "jwks-rsa": "^3.1.0",
-    "langchain": "^0.2.9",
+    "langchain": "^0.2.11",
     "mongodb": "^6.8.0",
     "mongoose": "^8.0.3",
     "natural": "^7.1.0",

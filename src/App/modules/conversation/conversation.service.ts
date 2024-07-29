@@ -29,9 +29,11 @@ export class ConversationService {
   }
 
   async message(auth0Id: string, dto: ConversationDTO) {
+    return await this.langchainService.companyAgent(dto.question);
+
     const { chatHistory, memoryClient } =
       await this.mongoChatHistory.getMongoChatHistory(auth0Id);
-    
+
     //El intent agent necesita el último mensaje de la conversación para tener el contexto de lo que dice el user. Si no el chat no existe, creamos un mensaje base para que no rompa.
     const lastMessage =
       chatHistory.length !== 0
@@ -43,7 +45,7 @@ export class ConversationService {
       dto.question,
       lastMessage,
     );
-    
+
     console.log(intent);
     console.log('-----------');
     console.log(intent.content);

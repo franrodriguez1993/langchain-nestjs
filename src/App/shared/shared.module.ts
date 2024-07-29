@@ -5,6 +5,7 @@ import { LangchainService } from './services/langchain.service';
 import { MongoChatHistory } from './services/mongo-history.service';
 import { NLPService } from './services/npl.service';
 import { UtilService } from './services/util.service';
+import { ConfigModule } from '@nestjs/config';
 
 const SERVICES = [
   Auth0ClientService,
@@ -15,7 +16,7 @@ const SERVICES = [
 ];
 
 @Module({
-  imports: [HttpModule],
+  imports: [ConfigModule.forRoot({isGlobal:true}),HttpModule],
   providers: SERVICES,
   exports: SERVICES,
 })
