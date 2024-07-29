@@ -126,7 +126,7 @@ export class LangchainService {
       name: 'get_info_company',
       description: 'Retorma información de la empresa.',
       func: async (input: string) => {
-        return 'company_name: rodriguez corp | type: empresa de modelaje coreana | models: la empresa cuenta con 50 modelos coreanas.';
+        return 'nombre: Restaurant Enrique cavill | type: restaurant de comida argentina con más de 25 años de experiencia | Especialidades: milanesas y empanadas tucumanas';
       },
     });
 
