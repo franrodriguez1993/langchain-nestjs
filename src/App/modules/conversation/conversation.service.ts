@@ -31,37 +31,6 @@ export class ConversationService {
   async message(auth0Id: string, dto: ConversationDTO) {
     return await this.langchainService.companyAgent(dto.question);
 
-    const { chatHistory, memoryClient } =
-      await this.mongoChatHistory.getMongoChatHistory(auth0Id);
-
-    //El intent agent necesita el último mensaje de la conversación para tener el contexto de lo que dice el user. Si no el chat no existe, creamos un mensaje base para que no rompa.
-    const lastMessage =
-      chatHistory.length !== 0
-        ? [chatHistory[chatHistory.length - 1]]
-        : [new HumanMessage('')];
-
-    // define intent:
-    const intent = await this.langchainService.intentAgent(
-      dto.question,
-      lastMessage,
-    );
-
-    console.log(intent);
-    console.log('-----------');
-    console.log(intent.content);
-    console.log('-----------');
-
-    switch (intent.content) {
-      case IntentType.SEARCH: {
-        return await this.searchIntentProcess(dto, memoryClient, chatHistory);
-      }
-      case IntentType.CONFIRM: {
-        return await this.confirmIntentProcess(dto, memoryClient, chatHistory);
-      }
-      case IntentType.REJECT: {
-        return await this.rejectIntentProcess(dto, memoryClient);
-      }
-    }
   }
 
   /**  SEARCH INTENT **/
