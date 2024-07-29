@@ -23,6 +23,6 @@ import { HttpModule } from '@nestjs/axios';
   ],
   providers: [ProductService],
   controllers: [ProductController],
-  exports:[ProductService]
+  exports: [ProductService],
 })
 export class ProductModule {}

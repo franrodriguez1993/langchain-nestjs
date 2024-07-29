@@ -16,7 +16,7 @@ const SERVICES = [
 ];
 
 @Module({
-  imports: [ConfigModule.forRoot({isGlobal:true}),HttpModule],
+  imports: [ConfigModule.forRoot({ isGlobal: true }), HttpModule],
   providers: SERVICES,
   exports: SERVICES,
 })

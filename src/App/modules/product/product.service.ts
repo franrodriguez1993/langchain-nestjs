@@ -11,11 +11,13 @@ export class ProductService {
   private langchainService: LangchainService;
   constructor(
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
-    private moduleRef:ModuleRef
-  ) { }
-  
+    private moduleRef: ModuleRef,
+  ) {}
+
   onModuleInit() {
-    this.langchainService = this.moduleRef.get(LangchainService,{strict:false})
+    this.langchainService = this.moduleRef.get(LangchainService, {
+      strict: false,
+    });
   }
 
   async createProduct(dto: CreateProductDTO): Promise<Product> {
