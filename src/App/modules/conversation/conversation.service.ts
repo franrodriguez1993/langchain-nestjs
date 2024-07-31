@@ -5,8 +5,6 @@ import { ConversationDTO } from './conversation.dto';
 import { MongoChatHistory } from '../../shared/services/mongo-history.service';
 import { NLPService } from '../../shared/services/npl.service';
 import { ProductService } from '../product/product.service';
-import { IntentType } from '../../shared/enums/intent.enum';
-import { BufferMemory } from 'langchain/memory';
 import { BaseMessage, HumanMessage } from '@langchain/core/messages';
 @Injectable()
 export class ConversationService {
@@ -29,8 +27,8 @@ export class ConversationService {
   }
 
   async message(auth0Id: string, dto: ConversationDTO) {
-    const graph = await this.langchainService.graphCreator();
-    const streamResults = await graph.stream(
+    const graph = await this.langchainService.agentSupervisor()
+    let streamResults = graph.stream(
       {
         messages: [
           new HumanMessage({
@@ -38,12 +36,13 @@ export class ConversationService {
           }),
         ],
       },
-      { recursionLimit: 10 },
+      { recursionLimit: 10},
     );
+
     for await (const output of await streamResults) {
       if (!output?.__end__) {
         console.log(output);
-        console.log('----');
+        console.log("----");
       }
     }
     return;

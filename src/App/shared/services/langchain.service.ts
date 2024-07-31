@@ -1,14 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { ChatOpenAI } from '@langchain/openai';
 
-import { BaseMessage } from '@langchain/core/messages';
+import { BaseMessage,HumanMessage,AIMessage } from '@langchain/core/messages';
 import { Pinecone } from '@pinecone-database/pinecone';
 import { UtilService } from './util.service';
 import type { RunnableConfig } from '@langchain/core/runnables';
 import { ToolNode } from '@langchain/langgraph/prebuilt';
-
+import { JsonOutputToolsParser } from "langchain/output_parsers";
 import { END, START, StateGraph } from '@langchain/langgraph';
 import { DynamicTool } from '@langchain/core/tools';
+import {
+  ChatPromptTemplate,
+  MessagesPlaceholder,
+} from "@langchain/core/prompts";
 
 import { ProductService } from '../../modules/product/product.service';
 import { ModuleRef } from '@nestjs/core';
@@ -32,8 +36,7 @@ export class LangchainService {
     this.llm = new ChatOpenAI({
       temperature: 0.1,
       maxTokens: 1000,
-      verbose: false,
-      model:"babbage-002"
+      verbose: false
     });
 
     this.pinecone = new Pinecone({
@@ -89,105 +92,227 @@ export class LangchainService {
     });
   }
 
+    private toolFinish() {
+    return new DynamicTool({
+      name: 'finish_tool',
+      description:
+        '',
+      func: async (input: string) => {
+        return "";
+      },
+    });
+  }
+
   /**  ------------------------ AGENTES  ------------------------  **/
 
   async agentInfoRestaurant() {
     // Research agent and node
-    const researchAgent = await createAgent({
-      llm: this.llm,
-      tools: [this.toolRestaurantInfo()],
-      systemMessage:
-        'Tu única función es proporcionar información certera respecto al restaurante sin inventar nada. Si tienes la respuesta, devuelvela incluyendo el prefijo FINAL ANSWER.',
-    });
+    const researchAgent = await createAgent(
+      this.llm,
+      [this.toolRestaurantInfo()],
+        'Tu única función es proporcionar información certera respecto al restaurante sin inventar nada.',
+    );
 
-    return async function InformerNode(
+    // Si tienes la respuesta definitiva al input, devuelve FINISH al final de tu respuesta, si tienes parte de la información necesaria, compártela con el siguiente agente, caso contrario no respondas, pasa el input al siguiente agente.
+
+      const researcherNode = async (
       state: AgentStateChannels,
       config?: RunnableConfig,
-    ) {
-      return runAgentNode({
-        state: state,
-        agent: researchAgent,
-        name: 'Informer',
-        config,
-      });
+      ) => {
+        console.log("ESTADO:")
+        console.log(state)
+      const result = await researchAgent.invoke(state, config);
+      return {
+        messages: [
+          new AIMessage({ content: result.output, name: "Informer" }),
+        ],
+      };
     };
+    return researcherNode;
+
   }
 
   async agentListProducts() {
-    const listProductAgent = await createAgent({
-      llm: this.llm,
-      tools: [this.toolListProduct()],
-      systemMessage:
-        'Tu única función es devolver una lista con todos los productos disponibles en el restaurant. Si tienes la respuesta, devuelvela incluyendo el prefijo FINAL ANSWER.',
-    });
-
-    return function productListerNode(
-      state: AgentStateChannels,
-      config?: RunnableConfig,
-    ) {
-      return runAgentNode({
-        state: state,
-        agent: listProductAgent,
-        name: 'ProductLister',
-      });
-    };
-  }
-
-  /**  ------------------------ TOOL NODE  ------------------------  **/
-  private toolNode() {
-    const tools = [this.toolListProduct(), this.toolRestaurantInfo()];
-    // This runs tools in the graph
-    const toolNode = new ToolNode<{ messages: BaseMessage[] }>(tools);
-    return toolNode;
-  }
-
-  async graphCreator() {
-    // instanciar nodos:
-    const InformerNode = await this.agentInfoRestaurant();
-    const ProductListerNode = await this.agentListProducts();
-    const toolNode = this.toolNode();
-
-    // 1. Crear el graph
-    const workflow = new StateGraph({
-      channels: agentStateChannels,
-    })
-
-      // 2. Agregar los nodos; estos son los que hacen el trabajo.
-      .addNode('Informer', InformerNode)
-      .addNode('ProductLister', ProductListerNode)
-      .addNode('call_tool', toolNode);
-
-    // 3. Definir los edges (bordes). We will define both regular and conditional ones
-    // After a worker completes, report to supervisor
-    workflow.addConditionalEdges('Informer', router, {
-      // We will transition to the other agent
-      continue: 'ProductLister',
-      call_tool: 'call_tool',
-      end: END,
-    });
-
-    workflow.addConditionalEdges('ProductLister', router, {
-      // We will transition to the other agent
-      continue: 'Informer',
-      call_tool: 'call_tool',
-      end: END,
-    });
-
-    workflow.addConditionalEdges(
-      'call_tool',
-      // Each agent node updates the 'sender' field
-      // the tool calling node does not, meaning
-      // this edge will route back to the original agent
-      // who invoked the tool
-      (x) => x.sender,
-      {
-        ProductLister: 'ProductLister',
-        Informer: 'Informer',
-      },
+    const listProductAgent = await createAgent(
+      this.llm,
+      [this.toolListProduct()],
+        'Tu única función es devolver una lista con todos los productos disponibles en el restaurant. Si no puedes responder la totalidad del input, pasale tu respuesta al siguiente agente.',
     );
 
-    workflow.addEdge(START, 'Informer');
+   const ListerNode = async (
+  state: AgentStateChannels,
+  config?: RunnableConfig,
+   ) => {
+     console.log("ESTADO:")
+    console.log(state)
+  const result = await listProductAgent.invoke(state, config);
+  return {
+    messages: [
+      new AIMessage({ content: result.output, name: "ProductLister" }),
+    ],
+  };
+    };
+    
+    return ListerNode;
+  }
+
+
+  async agentMongoId() {
+
+     const mongoIdAgent = await createAgent(
+      this.llm,
+      [this.toolGetByIdProduct()],
+        'Tu única función es devolver un producto de la base de datos buscado por id.',
+    );
+
+    const MongoSearcherNode = async (
+  state: AgentStateChannels,
+  config?: RunnableConfig,
+) => {
+  const result = await mongoIdAgent.invoke(state, config);
+  return {
+    messages: [
+      new AIMessage({ content: result.output, name: "MongoSearcher" }),
+    ],
+  };
+    };
+    
+    return MongoSearcherNode;
+
+  }
+
+
+  async agentFinishResult() {
+
+     const resultAgent = await createAgent(
+      this.llm,
+      [this.toolFinish()],
+       `Eres el agente integrador, responsable de recopilar, analizar y sintetizar toda la información proporcionada por los demás agentes especializados. Tu objetivo es formular una respuesta coherente, detallada y precisa basada en los datos y conclusiones que cada agente menor te ha entregado. Sigue estas instrucciones para generar la respuesta final 
+       - Combina la información de manera lógica y coherente, destacando las conclusiones más importantes.
+       - Revisa la respuesta final para asegurarte de que sea completa y esté libre de errores.
+       - Asegúrate de que la respuesta sea coherente y alineada con los objetivos y el contexto de la tarea.
+       Recuerda que tu papel es crucial para garantizar que la información combinada de los agentes menores se presente de manera clara y útil. Tu capacidad para integrar y comunicar esta información es esencial para el éxito de nuestra misión.
+       `,
+    );
+//  'Eres parte de un grupo de agentes AI y tu función es formular la respuesta al input inicial del usuario en base a la información dada por los demás agentes AI a la cuál tienes acceso a través del historial de mensajes. Tu respuesta debe ser clara y concisa. '
+      const FinishResulterNode = async (
+      state: AgentStateChannels,
+      config?: RunnableConfig,
+      ) => {
+        console.log("ESTADO:")
+        console.log(state)
+      const result = await resultAgent.invoke(state, config);
+      return {
+        messages: [
+          new AIMessage({ content: result.output, name: "FinishResulter" }),
+        ],
+      };
+        };
+    
+    return FinishResulterNode;
+
+  }
+
+
+  /**  ------------------------ SUPERVISOR ------------------------  **/
+
+  async agentSupervisor() {
+
+    // instanciamos los miembros del graph:
+    const members = ["Informer", "ProductLister","MongoSearcher","FinishResulter"];
+
+    // prompt del supervisor:
+    const systemPrompt =
+    "Eres un supervisor encargado de gestionar una conversación entre los" +
+    " siguientes agentes: {members}. Dada la siguiente petición del usuario," +
+    "  responde con el agente que debe actuar a continuación. Cada agente realizará una" +
+    " tarea específica y responderá con sus resultados y estado. Cuando termine," +
+        " responderá con FINISH.";
+    
+    const options = [END, ...members];
+
+
+    // Define the routing function
+    const functionDef = {
+      name: "route",
+      description: "Selecciona el siguiente rol.",
+      parameters: {
+        title: "routeSchema",
+        type: "object",
+        properties: {
+          next: {
+            title: "Next",
+            anyOf: [
+              { enum: options },
+            ],
+          },
+        },
+        required: ["next"],
+      },
+    };
+
+    const toolDef = {
+      type: "function",
+      function: functionDef,
+    } as const;
+
+    const prompt = ChatPromptTemplate.fromMessages([
+      ["system", systemPrompt],
+      new MessagesPlaceholder("messages"),
+      [
+        "system",
+        "Dada la conversación anterior, ¿quién debería actuar a continuación?" +
+        "¿O debemos FINISH? Selecciona una de: {options}",
+      ],
+    ]);
+
+
+    const formattedPrompt = await prompt.partial({
+    options: options.join(", "),
+    members: members.join(", "),
+    });
+    
+    const supervisorChain = formattedPrompt
+    .pipe(this.llm.bindTools(
+      [toolDef],
+      {
+        tool_choice: { "type": "function", "function": { "name": "route" } },
+      },
+    ))
+    .pipe(new JsonOutputToolsParser())
+    // select the first one
+      .pipe((x) => (x[0].args));
+    
+    const informerNode = await this.agentInfoRestaurant();
+    const productListerNoder = await this.agentListProducts();
+    const mongoSearcherNode = await this.agentMongoId();
+    const finishResulterNode = await this.agentFinishResult();
+    
+    
+    // 1. Create the graph
+    const workflow = new StateGraph<AgentStateChannels, unknown, string>({
+      channels: agentStateChannels,
+    }) // 2. Add the nodes; these will do the work
+      .addNode("Informer", informerNode)
+      .addNode("ProductLister", productListerNoder)
+      .addNode("supervisor", supervisorChain)
+      .addNode("MongoSearcher", mongoSearcherNode)
+      .addNode("FinishResulter",finishResulterNode)
+      // 3. Define the edges. We will define both regular and conditional ones
+      // After a worker completes, report to supervisor
+      members.forEach((member) => {
+        workflow.addEdge(member, "supervisor");
+      });
+
+      workflow.addConditionalEdges(
+        "supervisor",
+        (x: AgentStateChannels) => x.next,
+      );
+
+      workflow.addEdge(START, "supervisor");
+
     const graph = workflow.compile();
     return graph;
+
   }
 }

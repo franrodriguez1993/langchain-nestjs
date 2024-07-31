@@ -22,9 +22,6 @@ export class ProductService {
 
   async createProduct(dto: CreateProductDTO): Promise<Product> {
     const product = await this.productModel.create(dto);
-    const serialized = `title: ${product.name} | price: ${product.price}`;
-    await this.langchainService.vectorizeData(serialized);
-
     return product;
   }
 
