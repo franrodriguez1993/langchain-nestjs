@@ -33,6 +33,7 @@ export class LangchainService {
       temperature: 0.1,
       maxTokens: 1000,
       verbose: false,
+      model:"babbage-002"
     });
 
     this.pinecone = new Pinecone({
