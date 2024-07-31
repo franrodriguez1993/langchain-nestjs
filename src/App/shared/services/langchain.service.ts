@@ -50,9 +50,9 @@ export class LangchainService {
   private toolRestaurantInfo() {
     return new DynamicTool({
       name: 'get_info_restaurant',
-      description: 'Retorma información del restaurante.',
+      description: 'Return info about restaurant.',
       func: async (input: string) => {
-        return 'Nombre: Restaurant Enrique cavill | Tipo: restaurant de comida argentina con más de 25 años de experiencia | Especialidades: milanesas y empanadas tucumanas';
+        return 'Name: Restaurant Enrique cavill | Type: restaurant de comida argentina con más de 25 años de experiencia | Specialty: milanesas y empanadas tucumanas';
       },
     });
   }
@@ -60,7 +60,7 @@ export class LangchainService {
   private toolGetByIdProduct() {
     return new DynamicTool({
       name: 'get_product_by_id',
-      description: 'Retorna un producto de mongo buscado por un objectId.',
+      description: 'Returns a mongo product searched by an objectId.',
       func: async (input: string) => {
         const product = await this.productService.getProductById(input);
         if (!product) return null;
@@ -74,7 +74,7 @@ export class LangchainService {
     return new DynamicTool({
       name: 'list_products',
       description:
-        'Retorna una lista de productos disponibles en el restaurant.',
+        'Returns a list of products available in the restaurant searched in mongoDB.',
       func: async (input: string) => {
         const products = await this.productService.listProducts();
         if (products.length === 0) return 'No hay productos disponibles';
@@ -105,12 +105,13 @@ export class LangchainService {
     const researchAgent = await createAgent(
       this.llm,
       [this.toolRestaurantInfo()],
-       `Eres parte de un grupo de agentes. Tu función es proporcionar información respecto al restaurante siempre y cuando te lo soliciten. Tu límite es no inventar información como platos, precios de productos o buscar productos por id en mongoDB.
+       `Your role is a waiter on a restaurant. Your goal is to provide info regarding the restaurant. Do not make anything up.Do not include additional info. The answer must be clear and precise. If you can't answer the entire question, it doesn't matter. Another assistant will pick up where you left off.
       `);
 
 /*
-You are part of a group of agents. Your role is to provide information regarding the restaurant if and when you are asked for it. Do not make anything up.
-      Do not include additional information. The answer must be clear and precise.
+
+Eres parte de un grupo de agentes. Tu función es proporcionar información respecto al restaurante siempre y cuando te lo soliciten. Tu límite es no inventar información como platos, precios de productos o buscar productos por id en mongoDB.
+
      
 */
 
@@ -135,9 +136,13 @@ You are part of a group of agents. Your role is to provide information regarding
     const listProductAgent = await createAgent(
       this.llm,
       [this.toolListProduct()],
-      `Eres parte de un grupo de agentes. Tu única función es devolver una lista con todos los productos disponibles en el restaurant si te lo solicitan. Tu límite es no inventar información sobre el restaurante.`,
+      `Your role is a waiter on a restaurant. Your goal is to return a list of all the products available in the restaurant if requested. Your limit is not to invent info about the restaurant. If you can't answer the entire question, it doesn't matter. Another assistant will pick up where you left off.`,
     );
 
+    /*
+    Eres parte de un grupo de agentes. Tu única función es devolver una lista con todos los productos disponibles en el restaurant si te lo solicitan. Tu límite es no inventar información sobre el restaurante.
+    
+    */
    const ListerNode = async (
   state: AgentStateChannels,
   config?: RunnableConfig,
@@ -162,9 +167,14 @@ You are part of a group of agents. Your role is to provide information regarding
      const mongoIdAgent = await createAgent(
       this.llm,
       [this.toolGetByIdProduct()],
-       `Eres parte de un grupo de agentes. Tu única función es devolver un producto de la base de datos buscado por id si es que el input lo solicita. Sin inventar nada. Si no tienes la respuesta a algo, otro agente se encargará.
-       Tu límite es no inventar información sobre el restaurante.`,
+       `You're a database expert. Your goal is to return a product from the database searched by id if the input requests it. Without inventing anything. If you can't answer the entire question, it doesn't matter. Another assistant will pick up where you left off.
+       Your limit is not to make up information about the restaurant.`,
     );
+
+    /*
+    Eres parte de un grupo de agentes. Tu única función es devolver un producto de la base de datos buscado por id si es que el input lo solicita. Sin inventar nada. Si no tienes la respuesta a algo, otro agente se encargará.
+       Tu límite es no inventar información sobre el restaurante
+    */
 
     const MongoSearcherNode = async (
       state: AgentStateChannels,
@@ -189,13 +199,30 @@ You are part of a group of agents. Your role is to provide information regarding
      const resultAgent = await createAgent(
       this.llm,
       [this.toolFinish()],
-       `Eres parte de un grupo de agentes. Eres el agente integrador, responsable de recopilar, analizar y sintetizar toda la información proporcionada por los demás agentes especializados. Tu objetivo es formular una respuesta coherente, detallada y precisa basada en los datos y conclusiones que cada agente menor te ha entregado. Tu respuesta debe ser:
+       `You're the integrating agent responsible for synthesizing and presenting all the info provided by the minor agents. You must create a complete and coherent response based on the delivered data. Follow these steps:
+        1) Info Gathering:
+        - Review all the info and conclusions provided by the minor agents. Ensure you have access to all relevant details.
+        2) Analysis:
+        - Analyze the data to identify the main points and how they connect. Look for possible contradictions and resolve them.
+        3) Synthesis:
+        - Combine the info logically. Ensure your response is clear, coherent, and well-structured.
+        4) Writing:
+        -Draft the final response using the combined info. Make sure that:
+        -It is clear and specific in relation to the original query.
+        -It does not include info not provided by the minor agents.
+        -It does not have unnecessary preambles and focuses directly on answering the question.
+        5) You must translate the response to spanish. You'll never response in english.
+        Your goal is to ensure that the final response is a clear and detailed synthesis of all the provided info, without adding or omitting important data.
+       `,
+
+       /*
+       Eres parte de un grupo de agentes. Eres el agente integrador, responsable de recopilar, analizar y sintetizar toda la información proporcionada por los demás agentes especializados. Tu objetivo es formular una respuesta coherente, detallada y precisa basada en los datos y conclusiones que cada agente menor te ha entregado. Tu respuesta debe ser:
        - Clara y al grano
        - No inventar nada
        - No incluir ningún preambulo.
        - Debe integrar toda la información proporcionada en una respuesta completa y coherente.
        - Debe responder específicamente a la consulta original con toda la información relevante proporcionada.
-       `,
+       */
     );
 
     const FinishResulterNode = async (
@@ -225,11 +252,23 @@ You are part of a group of agents. Your role is to provide information regarding
 
     // prompt del supervisor:
     const systemPrompt =
-    "Eres un supervisor encargado de gestionar una conversación entre los" +
+      `
+    You're a supervisor in charge of managing a conversation between the
+    following agents: {members}. Given the following user request, 
+    respond with the agent that should act next. Each agent will perform a
+    specific task and will respond with its results and status. When you finish,
+    respond with FINISH and run the FinishResulter agent;
+      `;
+    
+   /*
+       "Eres un supervisor encargado de gestionar una conversación entre los" +
     " siguientes agentes: {members}. Dada la siguiente petición del usuario," +
     "  responde con el agente que debe actuar a continuación. Cada agente realizará una" +
     " tarea específica y responderá con sus resultados y estado. Cuando termine," +
         " responde con FINISH y ejecuta el agente FinishResulter";
+   
+   */ 
+    
     
     const options = [END, ...members];
 
