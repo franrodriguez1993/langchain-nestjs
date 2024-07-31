@@ -5,7 +5,6 @@ import { BaseMessage,HumanMessage,AIMessage } from '@langchain/core/messages';
 import { Pinecone } from '@pinecone-database/pinecone';
 import { UtilService } from './util.service';
 import type { RunnableConfig } from '@langchain/core/runnables';
-import { ToolNode } from '@langchain/langgraph/prebuilt';
 import { JsonOutputToolsParser } from "langchain/output_parsers";
 import { END, START, StateGraph } from '@langchain/langgraph';
 import { DynamicTool } from '@langchain/core/tools';
@@ -21,8 +20,6 @@ import {
   agentStateChannels,
   AgentStateChannels,
 } from '../tools/agent-state-channel';
-import { runAgentNode } from '../tools/run-agent-node';
-import { router } from '../tools/router-graph';
 @Injectable()
 export class LangchainService {
   private llm: ChatOpenAI;
@@ -34,9 +31,9 @@ export class LangchainService {
     private moduleRef: ModuleRef,
   ) {
     this.llm = new ChatOpenAI({
-      temperature: 0.1,
+      temperature: 0,
       maxTokens: 1000,
-      verbose: false
+      verbose: false,
     });
 
     this.pinecone = new Pinecone({
@@ -48,8 +45,6 @@ export class LangchainService {
     this.productService = this.moduleRef.get(ProductService, { strict: false });
   }
 
-
-
   /**  --------------------------- TOOLS ------------------------  **/
 
   private toolRestaurantInfo() {
@@ -57,7 +52,7 @@ export class LangchainService {
       name: 'get_info_restaurant',
       description: 'Retorma información del restaurante.',
       func: async (input: string) => {
-        return 'nombre: Restaurant Enrique cavill | type: restaurant de comida argentina con más de 25 años de experiencia | Especialidades: milanesas y empanadas tucumanas';
+        return 'Nombre: Restaurant Enrique cavill | Tipo: restaurant de comida argentina con más de 25 años de experiencia | Especialidades: milanesas y empanadas tucumanas';
       },
     });
   }
@@ -92,7 +87,7 @@ export class LangchainService {
     });
   }
 
-    private toolFinish() {
+  private toolFinish() {
     return new DynamicTool({
       name: 'finish_tool',
       description:
@@ -110,17 +105,21 @@ export class LangchainService {
     const researchAgent = await createAgent(
       this.llm,
       [this.toolRestaurantInfo()],
-        'Tu única función es proporcionar información certera respecto al restaurante sin inventar nada.',
-    );
+       `Eres parte de un grupo de agentes. Tu función es proporcionar información respecto al restaurante siempre y cuando te lo soliciten. Tu límite es no inventar información como platos, precios de productos o buscar productos por id en mongoDB.
+      `);
 
-    // Si tienes la respuesta definitiva al input, devuelve FINISH al final de tu respuesta, si tienes parte de la información necesaria, compártela con el siguiente agente, caso contrario no respondas, pasa el input al siguiente agente.
+/*
+You are part of a group of agents. Your role is to provide information regarding the restaurant if and when you are asked for it. Do not make anything up.
+      Do not include additional information. The answer must be clear and precise.
+     
+*/
 
       const researcherNode = async (
       state: AgentStateChannels,
       config?: RunnableConfig,
       ) => {
-        console.log("ESTADO:")
-        console.log(state)
+      console.log("ESTADO:")
+      console.log(state)
       const result = await researchAgent.invoke(state, config);
       return {
         messages: [
@@ -136,7 +135,7 @@ export class LangchainService {
     const listProductAgent = await createAgent(
       this.llm,
       [this.toolListProduct()],
-        'Tu única función es devolver una lista con todos los productos disponibles en el restaurant. Si no puedes responder la totalidad del input, pasale tu respuesta al siguiente agente.',
+      `Eres parte de un grupo de agentes. Tu única función es devolver una lista con todos los productos disponibles en el restaurant si te lo solicitan. Tu límite es no inventar información sobre el restaurante.`,
     );
 
    const ListerNode = async (
@@ -144,13 +143,14 @@ export class LangchainService {
   config?: RunnableConfig,
    ) => {
      console.log("ESTADO:")
-    console.log(state)
-  const result = await listProductAgent.invoke(state, config);
-  return {
-    messages: [
-      new AIMessage({ content: result.output, name: "ProductLister" }),
-    ],
-  };
+     console.log(state)
+     const result = await listProductAgent.invoke(state, config);
+
+      return {
+        messages: [
+          new AIMessage({ content: result.output, name: "ProductLister" }),
+        ],
+      };
     };
     
     return ListerNode;
@@ -162,52 +162,55 @@ export class LangchainService {
      const mongoIdAgent = await createAgent(
       this.llm,
       [this.toolGetByIdProduct()],
-        'Tu única función es devolver un producto de la base de datos buscado por id.',
+       `Eres parte de un grupo de agentes. Tu única función es devolver un producto de la base de datos buscado por id si es que el input lo solicita. Sin inventar nada. Si no tienes la respuesta a algo, otro agente se encargará.
+       Tu límite es no inventar información sobre el restaurante.`,
     );
 
     const MongoSearcherNode = async (
-  state: AgentStateChannels,
-  config?: RunnableConfig,
-) => {
-  const result = await mongoIdAgent.invoke(state, config);
-  return {
-    messages: [
-      new AIMessage({ content: result.output, name: "MongoSearcher" }),
-    ],
-  };
-    };
+      state: AgentStateChannels,
+      config?: RunnableConfig,
+    ) => {
+      console.log("ESTADO:")
+      console.log(state)
+      const result = await mongoIdAgent.invoke(state, config);
+      return {
+        messages: [
+          new AIMessage({ content: result.output, name: "MongoSearcher" }),
+        ],
+      };
+        };
     
     return MongoSearcherNode;
 
   }
-
 
   async agentFinishResult() {
 
      const resultAgent = await createAgent(
       this.llm,
       [this.toolFinish()],
-       `Eres el agente integrador, responsable de recopilar, analizar y sintetizar toda la información proporcionada por los demás agentes especializados. Tu objetivo es formular una respuesta coherente, detallada y precisa basada en los datos y conclusiones que cada agente menor te ha entregado. Sigue estas instrucciones para generar la respuesta final 
-       - Combina la información de manera lógica y coherente, destacando las conclusiones más importantes.
-       - Revisa la respuesta final para asegurarte de que sea completa y esté libre de errores.
-       - Asegúrate de que la respuesta sea coherente y alineada con los objetivos y el contexto de la tarea.
-       Recuerda que tu papel es crucial para garantizar que la información combinada de los agentes menores se presente de manera clara y útil. Tu capacidad para integrar y comunicar esta información es esencial para el éxito de nuestra misión.
+       `Eres parte de un grupo de agentes. Eres el agente integrador, responsable de recopilar, analizar y sintetizar toda la información proporcionada por los demás agentes especializados. Tu objetivo es formular una respuesta coherente, detallada y precisa basada en los datos y conclusiones que cada agente menor te ha entregado. Tu respuesta debe ser:
+       - Clara y al grano
+       - No inventar nada
+       - No incluir ningún preambulo.
+       - Debe integrar toda la información proporcionada en una respuesta completa y coherente.
+       - Debe responder específicamente a la consulta original con toda la información relevante proporcionada.
        `,
     );
-//  'Eres parte de un grupo de agentes AI y tu función es formular la respuesta al input inicial del usuario en base a la información dada por los demás agentes AI a la cuál tienes acceso a través del historial de mensajes. Tu respuesta debe ser clara y concisa. '
-      const FinishResulterNode = async (
+
+    const FinishResulterNode = async (
       state: AgentStateChannels,
       config?: RunnableConfig,
       ) => {
         console.log("ESTADO:")
         console.log(state)
-      const result = await resultAgent.invoke(state, config);
+        const result = await resultAgent.invoke(state, config);
       return {
         messages: [
           new AIMessage({ content: result.output, name: "FinishResulter" }),
         ],
+    };
       };
-        };
     
     return FinishResulterNode;
 
@@ -215,7 +218,6 @@ export class LangchainService {
 
 
   /**  ------------------------ SUPERVISOR ------------------------  **/
-
   async agentSupervisor() {
 
     // instanciamos los miembros del graph:
@@ -227,7 +229,7 @@ export class LangchainService {
     " siguientes agentes: {members}. Dada la siguiente petición del usuario," +
     "  responde con el agente que debe actuar a continuación. Cada agente realizará una" +
     " tarea específica y responderá con sus resultados y estado. Cuando termine," +
-        " responderá con FINISH.";
+        " responde con FINISH y ejecuta el agente FinishResulter";
     
     const options = [END, ...members];
 
