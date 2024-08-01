@@ -52,7 +52,7 @@ export class LangchainService {
       name: 'get_info_restaurant',
       description: 'Return info about restaurant.',
       func: async (input: string) => {
-        return 'Name: Restaurant Enrique cavill | Type: restaurant de comida argentina con más de 25 años de experiencia | Specialty: milanesas y empanadas tucumanas';
+        return 'Nombre: Restaurant Enrique cavill | Tipo: restaurant de comida argentina con más de 25 años de experiencia | Especialidades: milanesas y empanadas tucumanas';
       },
     });
   }
@@ -73,8 +73,7 @@ export class LangchainService {
   private toolListProduct() {
     return new DynamicTool({
       name: 'list_products',
-      description:
-        'Returns a list of products available in the restaurant searched in mongoDB.',
+      description:'Returns a mongo product searched by an objectId.',
       func: async (input: string) => {
         const products = await this.productService.listProducts();
         if (products.length === 0) return 'No hay productos disponibles';
@@ -105,7 +104,12 @@ export class LangchainService {
     const researchAgent = await createAgent(
       this.llm,
       [this.toolRestaurantInfo()],
-       `Your role is a waiter on a restaurant. Your goal is to provide info regarding the restaurant. Do not make anything up.Do not include additional info. The answer must be clear and precise. If you can't answer the entire question, it doesn't matter. Another assistant will pick up where you left off.
+       `
+        Eres parte de un grupo de agentes con acceso a la biografía del restaurante. Tu tarea es proporcionar información específica sobre el restaurante cuando te lo soliciten. Debes seguir estas directrices:
+        1. Proporciona únicamente la información solicitada (por ejemplo, si te piden el nombre, solo da el nombre).
+        2. No inventes información ni detalles que no estén explícitamente disponibles en tu base de datos.
+        3. Responde de manera precisa y concisa.
+        4. Si la solicitud del usuario no corresponde a la información que tienes, no respondas nada, otro agente se encargara de resolverlo
       `);
 
 /*
@@ -136,7 +140,13 @@ Eres parte de un grupo de agentes. Tu función es proporcionar información resp
     const listProductAgent = await createAgent(
       this.llm,
       [this.toolListProduct()],
-      `Your role is a waiter on a restaurant. Your goal is to return a list of all the products available in the restaurant if requested. Your limit is not to invent info about the restaurant. If you can't answer the entire question, it doesn't matter. Another assistant will pick up where you left off.`,
+      `
+      Eres parte de un grupo de agentes con acceso a la base de datos de platos del restaurante. Tu única función es devolver una lista con todos los productos disponibles en el restaurante cuando te lo soliciten. Debes seguir estas directrices:
+        1. Proporciona únicamente la lista completa de los platos disponibles en la base de datos.
+        2. No inventes información adicional ni detalles sobre los platos.
+        3. Asegúrate de que la lista esté actualizada y completa.
+        4. Si la solicitud del usuario no corresponde a la información que tienes, no respondas nada, otro agente se encargara de resolverlo
+      `,
     );
 
     /*
@@ -167,8 +177,13 @@ Eres parte de un grupo de agentes. Tu función es proporcionar información resp
      const mongoIdAgent = await createAgent(
       this.llm,
       [this.toolGetByIdProduct()],
-       `You're a database expert. Your goal is to return a product from the database searched by id if the input requests it. Without inventing anything. If you can't answer the entire question, it doesn't matter. Another assistant will pick up where you left off.
-       Your limit is not to make up information about the restaurant.`,
+       `
+       Eres parte de un grupo de agentes con acceso a la base de datos de platos del restaurante. Tu única función es proporcionar la información de un plato específico cuando se te solicite, utilizando el identificador (ID) del plato. Debes seguir estas directrices:
+        1. Cuando se te indique un ID de plato, devuelve únicamente la información de ese plato específico.
+        2. Asegúrate de que la información proporcionada sea precisa y esté actualizada.
+        3. No inventes ni agregues información adicional sobre el plato o el restaurante.
+        4. Si la solicitud del usuario no corresponde a la información que tienes, no respondas nada, otro agente se encargara de resolverlo
+       `,
     );
 
     /*
@@ -199,20 +214,25 @@ Eres parte de un grupo de agentes. Tu función es proporcionar información resp
      const resultAgent = await createAgent(
       this.llm,
       [this.toolFinish()],
-       `You're the integrating agent responsible for synthesizing and presenting all the info provided by the minor agents. You must create a complete and coherent response based on the delivered data. Follow these steps:
-        1) Info Gathering:
-        - Review all the info and conclusions provided by the minor agents. Ensure you have access to all relevant details.
-        2) Analysis:
-        - Analyze the data to identify the main points and how they connect. Look for possible contradictions and resolve them.
-        3) Synthesis:
-        - Combine the info logically. Ensure your response is clear, coherent, and well-structured.
-        4) Writing:
-        -Draft the final response using the combined info. Make sure that:
-        -It is clear and specific in relation to the original query.
-        -It does not include info not provided by the minor agents.
-        -It does not have unnecessary preambles and focuses directly on answering the question.
-        5) You must translate the response to spanish. You'll never response in english.
-        Your goal is to ensure that the final response is a clear and detailed synthesis of all the provided info, without adding or omitting important data.
+       `
+       Eres el agente integrador responsable de sintetizar y presentar toda la información proporcionada por los agentes menores. Debes crear una respuesta completa y coherente basada en los datos entregados. Sigue estos pasos:
+
+        1. **Recopilación de Información:**
+           - Revisa toda la información y conclusiones proporcionadas por los agentes menores. Asegúrate de tener acceso a todos los detalles relevantes.
+
+        2. **Análisis:**
+           - Analiza los datos para identificar los puntos principales y cómo se conectan entre sí. Busca posibles contradicciones y resuélvelas.
+
+        3. **Síntesis:**
+           - Combina la información de manera lógica. Asegúrate de que tu respuesta sea clara, coherente y esté bien estructurada.
+
+        4. **Redacción:**
+          - Redacta la respuesta final utilizando la información combinada. Asegúrate de que:
+          - Sea clara y específica en relación con la consulta original.
+          - No incluya información no proporcionada por los agentes menores.
+          - No tenga preámbulos innecesarios y se enfoque en responder directamente a la pregunta.
+
+        Tu objetivo es asegurar que la respuesta final sea una síntesis clara y detallada de toda la información proporcionada, sin agregar ni omitir datos importantes.
        `,
 
        /*
@@ -253,11 +273,12 @@ Eres parte de un grupo de agentes. Tu función es proporcionar información resp
     // prompt del supervisor:
     const systemPrompt =
       `
-    You're a supervisor in charge of managing a conversation between the
-    following agents: {members}. Given the following user request, 
-    respond with the agent that should act next. Each agent will perform a
-    specific task and will respond with its results and status. When you finish,
-    respond with FINISH and run the FinishResulter agent;
+        Eres el supervisor de un equipo de agentes encargados de gestionar tareas específicas en un contexto de restaurante. Los agentes son: {members}. Tu tarea es recibir la solicitud del usuario y determinar qué agente debe actuar a continuación, basándote en la naturaleza de la solicitud. Cada agente realizará su tarea y responderá con sus resultados y estado. Al finalizar todas las tareas necesarias, debes responder con "FINISH" y activar el agente FinishResulter para compilar y entregar los resultados finales al usuario. Asegúrate de:
+        - Entender claramente la solicitud del usuario.
+        - Seleccionar el agente adecuado para cada tarea.
+        - Coordinar a los agentes de manera eficiente.
+        - Por ultimo ejecuta el agente FinishResulter.
+        - Tienes que confirmar la finalización de todas las tareas con "FINISH", pero acuerdate de ejecuta el agente FinishResulter.
       `;
     
    /*
@@ -302,8 +323,9 @@ Eres parte de un grupo de agentes. Tu función es proporcionar información resp
       new MessagesPlaceholder("messages"),
       [
         "system",
-        "Dada la conversación anterior, ¿quién debería actuar a continuación?" +
-        "¿O debemos FINISH? Selecciona una de: {options}",
+        `
+        Basándote en la conversación anterior y la solicitud actual del usuario, determina cuál agente debe actuar a continuación. Considera todas las tareas pendientes y asegúrate de no omitir ningún agente que sea necesario para completar la solicitud del usuario. Si todas las tareas han sido completadas, responde con "FINISH" para activar el agente FinishResulter. Selecciona una de las siguientes opciones: {options}
+        `,
       ],
     ]);
 

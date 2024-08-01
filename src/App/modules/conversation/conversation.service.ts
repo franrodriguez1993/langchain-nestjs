@@ -36,7 +36,7 @@ export class ConversationService {
           }),
         ],
       },
-      { recursionLimit: 10},
+      { recursionLimit: 15},
     );
 
     for await (const output of await streamResults) {
