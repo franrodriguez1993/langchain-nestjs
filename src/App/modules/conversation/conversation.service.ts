@@ -27,6 +27,7 @@ export class ConversationService {
   }
 
   async message(auth0Id: string, dto: ConversationDTO) {
+    console.log("hola")
     const graph = await this.langchainService.agentSupervisor()
     let streamResults = graph.stream(
       {

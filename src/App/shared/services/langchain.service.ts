@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ChatOpenAI } from '@langchain/openai';
-
+import { ChatGroq } from "@langchain/groq";
 import { BaseMessage,HumanMessage,AIMessage } from '@langchain/core/messages';
 import { Pinecone } from '@pinecone-database/pinecone';
 import { UtilService } from './util.service';
@@ -12,7 +12,6 @@ import {
   ChatPromptTemplate,
   MessagesPlaceholder,
 } from "@langchain/core/prompts";
-
 import { ProductService } from '../../modules/product/product.service';
 import { ModuleRef } from '@nestjs/core';
 import { createAgent } from '../tools/create-agent';
@@ -20,9 +19,11 @@ import {
   agentStateChannels,
   AgentStateChannels,
 } from '../tools/agent-state-channel';
+
 @Injectable()
 export class LangchainService {
-  private llm: ChatOpenAI;
+  private llm: ChatGroq;
+  // private llm: ChatOpenAI;
   private pinecone: Pinecone;
   private productService: ProductService;
 
@@ -30,11 +31,17 @@ export class LangchainService {
     private utilService: UtilService,
     private moduleRef: ModuleRef,
   ) {
-    this.llm = new ChatOpenAI({
+    // this.llm = new ChatOpenAI({
+    //   temperature: 0,
+    //   maxTokens: 1000,
+    //   verbose: false,
+    // });
+    this.llm = new ChatGroq({
       temperature: 0,
       maxTokens: 1000,
       verbose: false,
-    });
+      modelName:"llama-3.1-70b-versatile"
+    })
 
     this.pinecone = new Pinecone({
       apiKey: process.env.PINECONE_API_KEY,
@@ -324,7 +331,7 @@ Eres parte de un grupo de agentes. Tu función es proporcionar información resp
       [
         "system",
         `
-        Basándote en la conversación anterior y la solicitud actual del usuario, determina cuál agente debe actuar a continuación. Considera todas las tareas pendientes y asegúrate de no omitir ningún agente que sea necesario para completar la solicitud del usuario. Si todas las tareas han sido completadas, responde con "FINISH" para activar el agente FinishResulter. Selecciona una de las siguientes opciones: {options}
+        Basándote en la conversación anterior y la solicitud actual del usuario, determina cuál agente debe actuar a continuación. Considera todas las tareas pendientes y asegúrate de no omitir ningún agente que sea necesario para completar la solicitud del usuario. Si todas las tareas han sido completadas, responde con "FINISH" para activar el agente FinishResulter. Selecciona una de las siguientes opciones: {options}. Importante: Basándote en el historial de mensajes, no puedes llamar de una vez al mismo agente. Puedes guiarte de la propiedad "name" de los AIMessage para determinar si dicho agente ya fue llamado previamente. 
         `,
       ],
     ]);
@@ -372,7 +379,7 @@ Eres parte de un grupo de agentes. Tu función es proporcionar información resp
         (x: AgentStateChannels) => x.next,
       );
 
-      workflow.addEdge(START, "supervisor");
+    workflow.addEdge(START, "supervisor");
 
     const graph = workflow.compile();
     return graph;
