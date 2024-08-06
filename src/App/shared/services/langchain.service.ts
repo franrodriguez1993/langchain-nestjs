@@ -22,8 +22,8 @@ import {
 
 @Injectable()
 export class LangchainService {
-  private llm: ChatGroq;
-  // private llm: ChatOpenAI;
+  // private llm: ChatGroq;
+  private llm: ChatOpenAI;
   private pinecone: Pinecone;
   private productService: ProductService;
 
@@ -31,17 +31,17 @@ export class LangchainService {
     private utilService: UtilService,
     private moduleRef: ModuleRef,
   ) {
-    // this.llm = new ChatOpenAI({
-    //   temperature: 0,
-    //   maxTokens: 1000,
-    //   verbose: false,
-    // });
-    this.llm = new ChatGroq({
+    this.llm = new ChatOpenAI({
       temperature: 0,
       maxTokens: 1000,
       verbose: false,
-      modelName:"llama-3.1-70b-versatile"
-    })
+    });
+    // this.llm = new ChatGroq({
+    //   temperature: 0,
+    //   maxTokens: 1000,
+    //   verbose: false,
+    //   modelName:"llama-3.1-70b-versatile"
+    // })
 
     this.pinecone = new Pinecone({
       apiKey: process.env.PINECONE_API_KEY,
@@ -57,9 +57,17 @@ export class LangchainService {
   private toolRestaurantInfo() {
     return new DynamicTool({
       name: 'get_info_restaurant',
-      description: 'Return info about restaurant.',
+      description: 'Retorna un JSON con la información del restaurante, tal como: Nombre del local, descripción, especialidades, dirección e información sobre el dueño.',
       func: async (input: string) => {
-        return 'Nombre: Restaurant Enrique cavill | Tipo: restaurant de comida argentina con más de 25 años de experiencia | Especialidades: milanesas y empanadas tucumanas';
+        return `
+      {
+      "Nombre": "Restaurante Enrique Cavill",
+      "Descripción":"Restaurante de comida argentina con más de 25 años de experiencia.",
+      "Especialidades":"Milanesa y empanadas tucumanas",
+      "Dueño": "Henry Cavill, Actor Británico.",
+      "Dirección":"Guasón 150 - Metrópolis."  
+      }
+        `;
       },
     });
   }
@@ -67,11 +75,11 @@ export class LangchainService {
   private toolGetByIdProduct() {
     return new DynamicTool({
       name: 'get_product_by_id',
-      description: 'Returns a mongo product searched by an objectId.',
+      description: 'Retorna un producto buscado en mongoDB a través de su ObjectId',
       func: async (input: string) => {
         const product = await this.productService.getProductById(input);
         if (!product) return null;
-        return `name: ${product.name} | price: ${product.price} | description: ${product.description}`;
+        return JSON.stringify(product);
       },
     });
 
@@ -80,15 +88,15 @@ export class LangchainService {
   private toolListProduct() {
     return new DynamicTool({
       name: 'list_products',
-      description:'Returns a mongo product searched by an objectId.',
+      description:'Retorna la lista de comidas disponibles en el menú del restarante.',
       func: async (input: string) => {
         const products = await this.productService.listProducts();
         if (products.length === 0) return 'No hay productos disponibles';
-        let listParset = '';
-        products.forEach(
-          (p) => (listParset += `name: ${p.name} price: ${p.price}}`),
-        );
-        return listParset;
+        // let listParset = '';
+        // products.forEach(
+        //   (p) => (listParset += `name: ${p.name} price: ${p.price}}`),
+        // );
+        return JSON.stringify(products);
       },
     });
   }
@@ -130,8 +138,8 @@ Eres parte de un grupo de agentes. Tu función es proporcionar información resp
       state: AgentStateChannels,
       config?: RunnableConfig,
       ) => {
-      console.log("ESTADO:")
-      console.log(state)
+      // console.log("ESTADO:")
+      // console.log(state)
       const result = await researchAgent.invoke(state, config);
       return {
         messages: [
@@ -164,8 +172,8 @@ Eres parte de un grupo de agentes. Tu función es proporcionar información resp
   state: AgentStateChannels,
   config?: RunnableConfig,
    ) => {
-     console.log("ESTADO:")
-     console.log(state)
+    //  console.log("ESTADO:")
+    //  console.log(state)
      const result = await listProductAgent.invoke(state, config);
 
       return {
@@ -193,17 +201,12 @@ Eres parte de un grupo de agentes. Tu función es proporcionar información resp
        `,
     );
 
-    /*
-    Eres parte de un grupo de agentes. Tu única función es devolver un producto de la base de datos buscado por id si es que el input lo solicita. Sin inventar nada. Si no tienes la respuesta a algo, otro agente se encargará.
-       Tu límite es no inventar información sobre el restaurante
-    */
-
     const MongoSearcherNode = async (
       state: AgentStateChannels,
       config?: RunnableConfig,
     ) => {
-      console.log("ESTADO:")
-      console.log(state)
+      // console.log("ESTADO:")
+      // console.log(state)
       const result = await mongoIdAgent.invoke(state, config);
       return {
         messages: [
@@ -242,22 +245,14 @@ Eres parte de un grupo de agentes. Tu función es proporcionar información resp
         Tu objetivo es asegurar que la respuesta final sea una síntesis clara y detallada de toda la información proporcionada, sin agregar ni omitir datos importantes.
        `,
 
-       /*
-       Eres parte de un grupo de agentes. Eres el agente integrador, responsable de recopilar, analizar y sintetizar toda la información proporcionada por los demás agentes especializados. Tu objetivo es formular una respuesta coherente, detallada y precisa basada en los datos y conclusiones que cada agente menor te ha entregado. Tu respuesta debe ser:
-       - Clara y al grano
-       - No inventar nada
-       - No incluir ningún preambulo.
-       - Debe integrar toda la información proporcionada en una respuesta completa y coherente.
-       - Debe responder específicamente a la consulta original con toda la información relevante proporcionada.
-       */
     );
 
     const FinishResulterNode = async (
       state: AgentStateChannels,
       config?: RunnableConfig,
       ) => {
-        console.log("ESTADO:")
-        console.log(state)
+        // console.log("ESTADO:")
+        // console.log(state)
         const result = await resultAgent.invoke(state, config);
       return {
         messages: [
@@ -280,23 +275,25 @@ Eres parte de un grupo de agentes. Tu función es proporcionar información resp
     // prompt del supervisor:
     const systemPrompt =
       `
-        Eres el supervisor de un equipo de agentes encargados de gestionar tareas específicas en un contexto de restaurante. Los agentes son: {members}. Tu tarea es recibir la solicitud del usuario y determinar qué agente debe actuar a continuación, basándote en la naturaleza de la solicitud. Cada agente realizará su tarea y responderá con sus resultados y estado. Al finalizar todas las tareas necesarias, debes responder con "FINISH" y activar el agente FinishResulter para compilar y entregar los resultados finales al usuario. Asegúrate de:
+      # Quien eres
+        Eres el supervisor de un equipo de agentes encargados de gestionar tareas específicas en un contexto de restaurante. Tu tarea es recibir la solicitud del usuario y determinar qué agente debe actuar a continuación, basándote en la naturaleza de la solicitud y en el historial de mensajes del chat. Cada agente realizará su tarea y responderá con sus resultados y estado. Al finalizar todas las tareas necesarias, debes responder con "FINISH" y activar el agente FinishResulter para compilar y entregar los resultados finales al usuario.
+        Asegúrate de:
         - Entender claramente la solicitud del usuario.
         - Seleccionar el agente adecuado para cada tarea.
         - Coordinar a los agentes de manera eficiente.
         - Por ultimo ejecuta el agente FinishResulter.
         - Tienes que confirmar la finalización de todas las tareas con "FINISH", pero acuerdate de ejecuta el agente FinishResulter.
+      
+      # Lista de agentes
+        Los agentes que tienes a cargo son {members}:
+        - Informer: Brinda información relevante sobre el restaurante
+        - ProductLister: Brinda una lista de productos disponibles en el menú del restaurante.
+        - MongoSearcher: Es el encargado de buscar un producto en MongoDB a través de su ObjectId
+        - FinishResulter: Este agente siempre debe ejecutarse al final del ciclo, es el que interactúa con el usuario brindando la respuesta a su pregunta o solicitud.
+
+        Es importante que comprendas que cada agente tiene un rol específico y no siempre deben intervenir todos. Debes considerar el input del usuario y las respuestas de los diferentes agentes para determinar si la solicitud del usuario ya puede ser resuelta. Cuando esté lista, ejecuta el agente FinishResulter para proporcionar una respuesta final.
+
       `;
-    
-   /*
-       "Eres un supervisor encargado de gestionar una conversación entre los" +
-    " siguientes agentes: {members}. Dada la siguiente petición del usuario," +
-    "  responde con el agente que debe actuar a continuación. Cada agente realizará una" +
-    " tarea específica y responderá con sus resultados y estado. Cuando termine," +
-        " responde con FINISH y ejecuta el agente FinishResulter";
-   
-   */ 
-    
     
     const options = [END, ...members];
 

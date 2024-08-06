@@ -8,8 +8,8 @@ import { Runnable } from "@langchain/core/runnables";
 import { ChatGroq } from "@langchain/groq";
 
 export  function createAgent(
-  // llm: ChatOpenAI,
-  llm:ChatGroq,
+  llm: ChatOpenAI,
+  // llm:ChatGroq,
   tools: any[],
   systemPrompt: string,
 ){

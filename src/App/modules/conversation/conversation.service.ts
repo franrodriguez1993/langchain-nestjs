@@ -29,7 +29,7 @@ export class ConversationService {
   async message(auth0Id: string, dto: ConversationDTO) {
     console.log("hola")
     const graph = await this.langchainService.agentSupervisor()
-    let streamResults = graph.stream(
+    let streamResults = await  graph.stream(
       {
         messages: [
           new HumanMessage({
@@ -39,12 +39,14 @@ export class ConversationService {
       },
       { recursionLimit: 15},
     );
-
-    for await (const output of await streamResults) {
+  
+    for await (const output of streamResults) {
+      
       if (!output?.__end__) {
         console.log(output);
         console.log("----");
       }
+     
     }
     return;
    
