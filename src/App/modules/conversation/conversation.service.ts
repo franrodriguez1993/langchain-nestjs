@@ -14,7 +14,7 @@ export class ConversationService {
   private nlpService: NLPService;
 
   constructor(private moduleRef: ModuleRef) {}
-
+ 
   onModuleInit() {
     this.langchain2Service = this.moduleRef.get(Langchain2Service, {
       strict: false,
@@ -26,7 +26,7 @@ export class ConversationService {
     this.productService = this.moduleRef.get(ProductService, { strict: false });
   }
 
-  async message(auth0Id: string, dto: ConversationDTO) {
+  async message( dto: ConversationDTO) {
     console.log("hola")
     const graph = await this.langchain2Service.createGraph()
 

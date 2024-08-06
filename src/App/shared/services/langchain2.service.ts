@@ -171,7 +171,8 @@ export class Langchain2Service {
       `,
     );
 
-     return async function productListerNode(state: IState, config?: RunnableConfig) {
+    return async function productListerNode(state: IState, config?: RunnableConfig) {
+
      const result = await listProductAgent.invoke(state, config);
       return {
         messages: [
@@ -209,7 +210,8 @@ export class Langchain2Service {
        `,
     );
 
-      return async function finisherNode(state: IState, config?: RunnableConfig) {
+    return async function finisherNode(state: IState, config?: RunnableConfig) {
+
      const result = await resultAgent.invoke(state, config);
       return {
         messages: [
@@ -264,8 +266,6 @@ export class Langchain2Service {
     const finishResulterNode = await this.FinishAgent();
     const supervisor = await this.Supervisor();
 
-
-    
     const workflow = new StateGraph<IState, unknown, string>({
       channels: agentStateChannelsNuestro,
     }) 
