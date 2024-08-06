@@ -11,7 +11,7 @@ export  function createAgent(
   llm: ChatOpenAI,
   // llm:ChatGroq,
   tools: any[],
-  systemPrompt: string,
+  systemPrompt: string
 ){
   // Each worker node will be given a name and some tools.
   const prompt = ChatPromptTemplate.fromMessages([

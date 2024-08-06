@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { LangchainService } from '../../shared/services/langchain.service';
 import { ModuleRef } from '@nestjs/core';
 import { ConversationDTO } from './conversation.dto';
 import { MongoChatHistory } from '../../shared/services/mongo-history.service';
 import { NLPService } from '../../shared/services/npl.service';
 import { ProductService } from '../product/product.service';
 import { BaseMessage, HumanMessage } from '@langchain/core/messages';
+import { Langchain2Service } from '../../shared/services/langchain2.service';
 @Injectable()
 export class ConversationService {
-  private langchainService: LangchainService;
+  private langchain2Service: Langchain2Service;
   private mongoChatHistory: MongoChatHistory;
   private productService: ProductService;
   private nlpService: NLPService;
@@ -16,7 +16,7 @@ export class ConversationService {
   constructor(private moduleRef: ModuleRef) {}
 
   onModuleInit() {
-    this.langchainService = this.moduleRef.get(LangchainService, {
+    this.langchain2Service = this.moduleRef.get(Langchain2Service, {
       strict: false,
     });
     this.mongoChatHistory = this.moduleRef.get(MongoChatHistory, {
@@ -28,7 +28,8 @@ export class ConversationService {
 
   async message(auth0Id: string, dto: ConversationDTO) {
     console.log("hola")
-    const graph = await this.langchainService.agentSupervisor()
+    const graph = await this.langchain2Service.createGraph()
+
     let streamResults = await  graph.stream(
       {
         messages: [
@@ -36,19 +37,25 @@ export class ConversationService {
             content: dto.question,
           }),
         ],
+        input:dto.question
       },
-      { recursionLimit: 15},
+      { recursionLimit: 10},
     );
   
+    let finalResult;
     for await (const output of streamResults) {
-      
+
       if (!output?.__end__) {
+
         console.log(output);
         console.log("----");
+        finalResult = output;
       }
      
     }
-    return;
+
+    const returnMessage = finalResult?.Supervisor.result;
+    return returnMessage;
    
   }
 
